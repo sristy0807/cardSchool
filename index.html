@@ -42,7 +42,10 @@ h2{font-size:clamp(26px,4vw,34px);font-weight:700}
 .card.red{color:var(--red)}
 .card .tl,.card .br{position:absolute;font-size:calc(var(--cw)*.25);line-height:.95;text-align:center}
 .card .tl{top:6%;left:9%}.card .br{bottom:6%;right:9%;transform:rotate(180deg)}
-.card .mid{position:absolute;inset:0;display:grid;place-items:center;font-size:calc(var(--cw)*.5)}
+.card .mid{position:absolute;inset:0;display:grid;place-items:center}
+.card .sv{display:block;fill:currentColor}
+.card .tl .sv,.card .br .sv{width:calc(var(--cw)*.19);height:calc(var(--cw)*.19);margin:2px auto 0}
+.card .mid .sv{width:calc(var(--cw)*.46);height:calc(var(--cw)*.46)}
 .card.sm{--cw:40px}
 .card.back{background:linear-gradient(135deg,var(--accent),var(--accent2));border:3px solid #fff}
 .crow{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;align-items:flex-end}
@@ -258,6 +261,8 @@ body.scr-table #app{max-width:1200px;height:100dvh;padding:8px max(env(safe-area
 .backlbl{display:inline}
 @media(max-width:600px){
   .backlbl{display:none}
+  .topbar .grow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar .dots{order:9;width:100%;justify-content:center}
   .tbl .seat .sub2{display:none}
   .tbl .actions{gap:6px}
   .tbl .actions [data-bid]{flex:1 0 34px;max-width:44px;padding:6px 0;min-height:42px}
@@ -290,7 +295,13 @@ body.scr-table #app{max-width:1200px;height:100dvh;padding:8px max(env(safe-area
 <script>
 {
 const SUITS=['S','H','D','C'];
-const SYM={S:'♠',H:'♥',D:'♦',C:'♣'};
+const SYM={S:'♠︎\uFE0E',H:'♥︎\uFE0E',D:'♦︎\uFE0E',C:'♣︎\uFE0E'};
+/* card suits are drawn as SVG so iOS/Android never swap in emoji */
+const SUITSVG={S:'<path d="M50 4C38 22 8 38 8 60c0 14 11 23 23 23 7 0 13-3 16-8-1 9-5 15-12 21h30c-7-6-11-12-12-21 3 5 9 8 16 8 12 0 23-9 23-23C92 38 62 22 50 4z"/>',
+  H:'<path d="M50 92C20 68 4 52 4 32 4 17 15 6 29 6c9 0 17 5 21 13 4-8 12-13 21-13 14 0 25 11 25 26 0 20-16 36-46 60z"/>',
+  D:'<path d="M50 2 88 50 50 98 12 50z"/>',
+  C:'<circle cx="50" cy="27" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M44 52h12c0 20 4 30 14 44H30c10-14 14-24 14-44z"/>'};
+const sv=s=>`<svg class="sv" viewBox="0 0 100 100" aria-hidden="true">${SUITSVG[s]}</svg>`;
 const SNAME={S:'Spades',H:'Hearts',D:'Diamonds',C:'Clubs'};
 const BN={S:'ইস্কাপন',H:'হরতন',D:'রুইতন',C:'চিড়িতন'};
 const rl=r=>({11:'J',12:'Q',13:'K',14:'A'}[r]||String(r));
@@ -307,7 +318,7 @@ const PTS29={11:3,9:2,14:1,10:1};
 const pts=c=>PTS29[c.r]||0;
 const power=(c,mode)=>mode==='29'?P29[c.r]:c.r;
 function sortHand(h,mode){const o={S:0,H:1,C:2,D:3};return h.sort((a,b)=>o[a.s]-o[b.s]||power(b,mode)-power(a,mode));}
-function cardHTML(c,o={}){return `<div class="card ${isRed(c.s)?'red':''} ${o.cls||''}" ${o.attr||''}><span class="tl">${rl(c.r)}<br>${SYM[c.s]}</span><span class="mid">${SYM[c.s]}</span><span class="br">${rl(c.r)}<br>${SYM[c.s]}</span></div>`;}
+function cardHTML(c,o={}){return `<div class="card ${isRed(c.s)?'red':''} ${o.cls||''}" ${o.attr||''} role="img" aria-label="${longName(c)}"><span class="tl">${rl(c.r)}${sv(c.s)}</span><span class="mid">${sv(c.s)}</span><span class="br">${rl(c.r)}${sv(c.s)}</span></div>`;}
 const C=(r,s)=>cardHTML({r,s},{cls:'sm'});
 const row=(...cs)=>`<div class="crow">${cs.join('')}</div>`;
 function beats(b,a,trump,mode){if(trump&&b.s===trump&&a.s!==trump)return true;if(trump&&a.s===trump&&b.s!==trump)return false;if(b.s===a.s)return power(b,mode)>power(a,mode);return false;}
@@ -454,7 +465,7 @@ function genTrickQ(trump){
   let ex;
   if(tr&&wc.s==='S'&&lead!=='S')ex=`${cname(wc)} wins: ${cards.filter(c=>c.s==='S').length>1?'it is the highest trump.':'a trump beats every other suit.'}`;
   else ex=`${cname(wc)} wins: highest ${SNAME[lead]}, the suit that was led.${offHigh?' Other suits cannot win — even a King or Ace.':''}`;
-  return {prompt:trump?'Spades ♠ are trump. Which card wins this trick?':'No trump. Which card wins this trick?',
+  return {prompt:trump?'Spades ♠︎ are trump. Which card wins this trick?':'No trump. Which card wins this trick?',
     choices:cards.map((c,i)=>({html:`${cardHTML(c)}<div class="clabel">${labels[i]}</div>`,ok:i===w})),cards:true,explain:ex};
 }
 function numOpts(correct,cands){const set=[correct];const has=v=>set.some(x=>Math.abs(x-v)<1e-9);
@@ -463,7 +474,7 @@ function numOpts(correct,cands){const set=[correct];const has=v=>set.some(x=>Mat
   return shuffle(set);}
 function genCBQ(){
   const t=rnd(5);
-  if(t===0)return {prompt:'In Call Bridge, which suit is <b>always trump</b>?',choices:SUITS.map(s=>({html:`${SYM[s]} ${SNAME[s]}`,ok:s==='S'})),explain:'Spades ♠ are always trump in Call Bridge.'};
+  if(t===0)return {prompt:'In Call Bridge, which suit is <b>always trump</b>?',choices:SUITS.map(s=>({html:`${SYM[s]} ${SNAME[s]}`,ok:s==='S'})),explain:'Spades ♠︎ are always trump in Call Bridge.'};
   const bid=2+rnd(5);
   const won=t<=2?(t===1?bid:bid+1+rnd(3)):Math.max(0,bid-1-rnd(2));
   const correct=won>=bid?Math.round((bid+.1*(won-bid))*10)/10:-bid;
@@ -490,10 +501,10 @@ function gen29Q(){
 const LEVELS=[
  {id:1,group:'Basics',title:'Meet the deck',type:'quiz',gen:genSuitQ,n:8,pass:6,lesson:()=>`
   <p>A deck has <b>52 cards</b> in <b>4 suits</b>. Each suit has a symbol and a colour:</p>
-  <table class="suits"><tr><td class="big">♠</td><td>Spades</td><td class="bn">ইস্কাপন</td><td>black</td></tr>
-  <tr><td class="big redt">♥</td><td>Hearts</td><td class="bn">হরতন</td><td>red</td></tr>
-  <tr><td class="big redt">♦</td><td>Diamonds</td><td class="bn">রুইতন</td><td>red</td></tr>
-  <tr><td class="big">♣</td><td>Clubs</td><td class="bn">চিড়িতন</td><td>black</td></tr></table>
+  <table class="suits"><tr><td class="big">♠︎</td><td>Spades</td><td class="bn">ইস্কাপন</td><td>black</td></tr>
+  <tr><td class="big redt">♥︎</td><td>Hearts</td><td class="bn">হরতন</td><td>red</td></tr>
+  <tr><td class="big redt">♦︎</td><td>Diamonds</td><td class="bn">রুইতন</td><td>red</td></tr>
+  <tr><td class="big">♣︎</td><td>Clubs</td><td class="bn">চিড়িতন</td><td>black</td></tr></table>
   <p>Every suit has 13 cards: <b>2 to 10</b>, plus four letter cards:</p>
   ${row(C(11,'C'),C(12,'D'),C(13,'H'),C(14,'S'))}
   <p><b>J</b> Jack <span class="bn">(গোলাম)</span> · <b>Q</b> Queen <span class="bn">(বিবি)</span> · <b>K</b> King <span class="bn">(সাহেব)</span> · <b>A</b> Ace <span class="bn">(টেক্কা)</span></p>
@@ -507,17 +518,17 @@ const LEVELS=[
   <p>Call Bridge and 29 are <b>trick-taking</b> games. In a <b>trick</b>, each of the 4 players plays one card, going round the table. The first card is the <b>lead</b>.</p>
   <p><b>Rule 1 — follow suit.</b> If you have a card of the led suit, you <i>must</i> play one. If you don't, you may play any card.</p>
   <p>West leads ${C(7,'H')} and you hold:</p>${row(C(13,'H'),C(3,'H'),C(14,'S'),C(9,'C'))}
-  <p>You must play K♥ or 3♥ — not the A♠, even though it's your best card.</p>`},
+  <p>You must play K♥︎ or 3♥︎ — not the A♠︎, even though it's your best card.</p>`},
  {id:4,group:'Tricks',title:'Win the trick',type:'quiz',gen:()=>genTrickQ(false),n:8,pass:6,lesson:()=>`
   <p><b>Rule 2 — the highest card of the led suit wins.</b> Cards of other suits cannot win, however big they are.</p>
   ${row(C(7,'H'),C(2,'H'),C(14,'C'),C(10,'H'))}
-  <p>Hearts were led. A♣ is a different suit, so it doesn't count. <b>10♥ wins.</b></p>
+  <p>Hearts were led. A♣︎ is a different suit, so it doesn't count. <b>10♥︎ wins.</b></p>
   <p class="tip">Whoever wins a trick leads the next one.</p>`},
  {id:5,group:'Tricks',title:'The power of trump',type:'quiz',gen:()=>genTrickQ(true),n:8,pass:6,lesson:()=>`
   <p><b>Trump</b> is one special suit that beats all the others. Any trump beats any non-trump card. If several trumps are played, the highest trump wins.</p>
-  <p>In <b>Call Bridge, Spades ♠ are always trump</b>.</p>
+  <p>In <b>Call Bridge, Spades ♠︎ are always trump</b>.</p>
   ${row(C(13,'H'),C(14,'H'),C(2,'S'),C(12,'H'))}
-  <p>Hearts led, but the tiny <b>2♠ wins</b>, because it's a trump.</p>
+  <p>Hearts led, but the tiny <b>2♠︎ wins</b>, because it's a trump.</p>
   <p class="tip">You can only play a trump on another suit when you have none of the led suit. In Call Bridge, if you're out of the led suit and hold a spade, you must play it.</p>`},
  {id:6,group:'Tricks',title:'Your first full hand',type:'practice',lesson:()=>`
   <p>Time to play a real hand against three computer players. Everyone gets <b>13 cards</b>, so there are <b>13 tricks</b>. Spades are trump.</p>
@@ -693,7 +704,7 @@ function estimateTricks(h){let t=0;const by={};for(const c of h)(by[c.s]=by[c.s]
     if(s==='S')t+=Math.max(0,n-3)*.8;else if(n<=1&&sp>=3)t+=.5;}
   return Math.max(1,Math.min(8,Math.round(t)));}
 function stepBidCB(){const g=G;
-  if(g.bidCount===4){g.phase='play';g.turn=(g.dealer+1)%4;g.msg='Calls done — Spades ♠ are trump. Play!';render();nextTurn();return;}
+  if(g.bidCount===4){g.phase='play';g.turn=(g.dealer+1)%4;g.msg='Calls done — Spades ♠︎ are trump. Play!';render();nextTurn();return;}
   const p=g.bidTurn;if(p===0){render();return;}
   later(()=>{g.bids[p]=estimateTricks(g.hands[p]);g.msg=`${SEATN[p]} calls ${g.bids[p]}.`;g.bidTurn=(p+1)%4;g.bidCount++;render();stepBidCB();},600);}
 function humanBidCB(n){const g=G;if(g.phase!=='bid'||g.bidTurn!==0)return;sfx.bid();g.bids[0]=n;g.msg=`You call ${n}.`;g.bidTurn=1;g.bidCount++;render();stepBidCB();}
@@ -798,7 +809,7 @@ function renderTable(){const g=G;if(!g)return;
   const sub=p=>g.mode==='cb'?`Call ${g.bids[p]??'–'} · Won ${g.tricksWon[p]}`:g.mode==='29'&&g.phase==='bid'?(g.auction.passed[p]?'passed':g.auction.holder===p?`bid ${g.auction.high}`:'&nbsp;'):`Tricks ${g.tricksWon[p]}`;
   const seat=p=>`<div class="seat s${p} ${turnOf(p)?'turn':''} ${g.gotSeat===p?'got':''}"><div class="sname">${SEATN[p]}${g.mode==='29'&&p===2?' <span class="pt">partner</span>':''}${g.mode==='29'&&g.bidder===p?` <span class="pt bidtag">bid ${g.bidValue}</span>`:''}</div>${p?`<div class="sub2">🂠 ${g.hands[p].length}</div>`:''}<div>${sub(p)}</div></div>`;
   let trumpTxt;
-  if(g.mode!=='29')trumpTxt=`<span class="trumpchip">♠</span> always`;
+  if(g.mode!=='29')trumpTxt=`<span class="trumpchip">♠︎</span> always`;
   else if(g.trumpRevealed&&g.trump)trumpTxt=`<span class="trumpchip ${isRed(g.trump)?'red':''}">${SYM[g.trump]}</span> revealed`;
   else if(g.trump&&g.bidder===0)trumpTxt=`<span class="trumpchip ${isRed(g.trump)?'red':''}">${SYM[g.trump]}</span> secret — only you know`;
   else trumpTxt=g.phase==='bid'?'not chosen yet':'hidden';
